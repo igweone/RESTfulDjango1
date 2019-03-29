@@ -5,13 +5,21 @@ from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework import filters
 from rest_framework import viewsets
+from rest_framework.authtoken.serializers import AuthTokenSerializer
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 
 
 from .serializers import HelloSerializer
 from .serializers import UserProfileSerializer
+from .serializers import ProfileFeedItemSerializer
 
 from .models import UserProfile
+from .models import ProfileFeedItem
+
 from .permissions import UpdateOwnProfile
+from .permissions import PostOwnStatus
 
 
 
@@ -109,6 +117,32 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = (UpdateOwnProfile,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email')
+
+
+class LoginViewSet(viewsets.ViewSet):
+    """Checks email and password and returns an auth token """
+    serializer_class = AuthTokenSerializer
+
+    def create(self, request): #this is where post requests get to. im sure you know that
+        """Use the ObtainAuthToken APIView to validate and create a token"""
+        
+        return ObtainAuthToken().post(request)
+
+
+
+class UserProfileFeedViewSet(viewsets.ModelViewSet):
+    """handles creating, reading and updating profile feed items"""
+    serializer_class = ProfileFeedItemSerializer
+    queryset = ProfileFeedItem.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (PostOwnStatus, IsAuthenticated)
+
+    def perform_create(self, serializer):
+        """Sets the user profile to the currently logged in user"""
+        serializer.save(user_profile = self.request.user)
+
+    
+
 
 
 
